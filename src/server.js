@@ -14,6 +14,7 @@ const PORT = process.env.PORT || 5001
 if(process.env.NODE_ENV === "production") job.start();
 
 app.use(express.json())
+app.use(cors({ origin: "*" }));
 app.use(rateLimiter)
 
 app.use("/api/transactions", transactionRoutes)
