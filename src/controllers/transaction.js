@@ -88,3 +88,29 @@ export async function getSummaryByUserId (req, res) {
         res.status(500).json({message: "Internal server error"})
     }
 }
+
+export async function getTopSpendByUserId (req, res) {
+    console.log('demo')
+    try {
+        const { userId } = req.params;
+
+        const topResult = await sql`
+            SELECT category, total_spent
+            FROM (
+            SELECT 
+                user_id,
+                category,
+                SUM(amount) AS total_spent,
+                RANK() OVER (PARTITION BY user_id ORDER BY SUM(amount) ASC) AS rank
+            FROM transactions
+            WHERE type = 'expense' AND user_id = ${userId}
+            GROUP BY user_id, category
+            ) ranked
+            WHERE rank <= 3;
+        `
+        return res.status(200).json(topResult)
+    } catch (error) {
+        console.log("Error getting the transactions", error)
+        res.status(500).json({message: "Internal server error"})
+    }
+}
