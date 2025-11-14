@@ -1,11 +1,23 @@
 import { sql } from "../config/db.js"
 
 export async function getTransactionsByUserId(req, res) {
-    const {userId} = req.params
+    const { userId } = req.params
+    const { limit } = req.query; 
     try {
-        const transactions = await sql`
-            SELECT * FROM transactions WHERE user_id = ${userId} ORDER BY created_at DESC
-        `
+        let transactions;
+        if (limit) {
+            // If limit param exists
+            const limitValue = parseInt(limit, 10);
+            transactions = await sql`
+                SELECT * FROM transactions WHERE user_id = ${userId} ORDER BY created_at DESC LIMIT ${limitValue};
+            `
+          } else {
+            // If no limit param, fetch all
+            transactions = await sql`
+                SELECT * FROM transactions WHERE user_id = ${userId} ORDER BY created_at DESC
+            `;
+          }
+        
 
         return res.status(200).json(transactions)
     } catch (error) {
