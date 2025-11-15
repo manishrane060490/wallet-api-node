@@ -1,11 +1,23 @@
 import { sql } from "../config/db.js"
 
 export async function getTransactionsByUserId(req, res) {
-    const {userId} = req.params
+    const { userId } = req.params
+    const { limit } = req.query; 
     try {
-        const transactions = await sql`
-            SELECT * FROM transactions WHERE user_id = ${userId} ORDER BY created_at DESC
-        `
+        let transactions;
+        if (limit) {
+            // If limit param exists
+            const limitValue = parseInt(limit, 10);
+            transactions = await sql`
+                SELECT * FROM transactions WHERE user_id = ${userId} ORDER BY created_at DESC LIMIT ${limitValue};
+            `
+          } else {
+            // If no limit param, fetch all
+            transactions = await sql`
+                SELECT * FROM transactions WHERE user_id = ${userId} ORDER BY created_at DESC
+            `;
+          }
+        
 
         return res.status(200).json(transactions)
     } catch (error) {
@@ -85,6 +97,32 @@ export async function getSummaryByUserId (req, res) {
 
     } catch(error) {
         console.log("Error getting the transactions summary", error)
+        res.status(500).json({message: "Internal server error"})
+    }
+}
+
+export async function getTopSpendByUserId (req, res) {
+    console.log('demo')
+    try {
+        const { userId } = req.params;
+
+        const topResult = await sql`
+            SELECT category, total_spent
+            FROM (
+            SELECT 
+                user_id,
+                category,
+                SUM(amount) AS total_spent,
+                RANK() OVER (PARTITION BY user_id ORDER BY SUM(amount) ASC) AS rank
+            FROM transactions
+            WHERE type = 'expense' AND user_id = ${userId}
+            GROUP BY user_id, category
+            ) ranked
+            WHERE rank <= 3;
+        `
+        return res.status(200).json(topResult)
+    } catch (error) {
+        console.log("Error getting the transactions", error)
         res.status(500).json({message: "Internal server error"})
     }
 }
